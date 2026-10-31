@@ -1,75 +1,50 @@
 import streamlit as st
-import string
 import pickle
-import nltk
-
+import string
 from nltk.corpus import stopwords
+import nltk
 from nltk.stem.porter import PorterStemmer
 
-# Download required NLTK datasets
-nltk.download('punkt')
-nltk.download('punkt_tab')
-nltk.download('stopwords')
-
 ps = PorterStemmer()
-stop_words = set(stopwords.words('english'))
+
 
 def transform_text(Message):
     Message = Message.lower()
-
-    # Tokenization
     Message = nltk.word_tokenize(Message)
-
     y = []
-
-    # Remove special characters
     for i in Message:
         if i.isalnum():
             y.append(i)
-
     Message = y[:]
     y.clear()
-
-    # Remove stopwords
     for i in Message:
-        if i not in stop_words and i not in string.punctuation:
+        if i not in stopwords.words('english') and i not in string.punctuation:
             y.append(i)
-
-    Message = y[:]
+    Message: y[:]
     y.clear()
-
-    # Stemming
     for i in Message:
         y.append(ps.stem(i))
 
     return " ".join(y)
 
 
-# Load trained model and vectorizer
-tfidf = pickle.load(open('vectorizer2.pkl', 'rb'))
-mnb = pickle.load(open('model2.pkl', 'rb'))
+tfidf = pickle.load(open('vectorizer2.pkl','rb'))
+model = pickle.load(open('model2.pkl','rb'))
 
-st.title("SMS Spam Classifier")
+st.title("Email/SMS Spam Classifier")
 
-input_sms = st.text_area("Enter your SMS")
+input_sms = st.text_area("Enter the message")
 
-if st.button("Predict"):
+if st.button('Predict'):
 
-    if input_sms.strip() == "":
-        st.warning("Please enter an SMS message.")
-
+    # 1. preprocess
+    transformed_sms = transform_text(input_sms)
+    # 2. vectorize
+    vector_input = tfidf.transform([transformed_sms])
+    # 3. predict
+    result = model.predict(vector_input)[0]
+    # 4. Display
+    if result == 1:
+        st.header("Spam")
     else:
-        # Preprocessing
-        transformed_sms = transform_text(input_sms)
-
-        # Vectorization
-        vector_input = tfidf.transform([transformed_sms])
-
-        # Prediction
-        model_output = mnb.predict(vector_input)[0]
-
-        # Display result
-        if model_output == 1:
-            st.error("Spam")
-        else:
-            st.success("Not a Spam")
+        st.header("Not Spam")
